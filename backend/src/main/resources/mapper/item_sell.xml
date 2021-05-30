@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+<mapper namespace="com.egemmerce.hc.repository.mapper.ItemSellMapper">
+
+
+<!-- 상품등록 -->
+
+<!-- 상품 전체 조회 -->
+<select id="selectItemNoSubRvsSort" parameterType="SortProcess" resultType="ItemSellSet">
+select * 
+from (select * 
+from item_sell inner join 
+(select ANY_VALUE(ip_no) as ip_no, ip_item_no, ANY_VALUE(ip_value) as ip_value from item_photo group by ip_item_no)
+tmp_table on is_item_no = tmp_table.ip_item_no) final_table1
+left join (select ap_item_no, count(*) as joiner_cnt from auction_participant group by ap_item_no) final_table2 on final_table1.ip_item_no = final_table2.ap_item_no
+where is_category_main=#{ctgrMain} and is_item_no in (select i_no from item where i_completed = "false")
+order by ${sortName} desc
+limit #{pageNo}, 100;
+</select>
+
+<select id="selectItemYesSubRvsSort" parameterType="SortProcess" resultType="ItemSellSet">
+select * from (select * from item_sell
+   inner join 
+   (select ANY_VALUE(ip_no) as ip_no, ip_item_no, ANY_VALUE(ip_value) as ip_value from item_photo group by ip_item_no)
+   tmp_table on is_item_no = tmp_table.ip_item_no) final_table1
+left join (select ap_item_no, count(*) as joiner_cnt from auction_participant group by ap_item_no) final_table2 on final_table1.ip_item_no = final_table2.ap_item_no
+where is_category_main=#{ctgrMain} and is_category_sub=#{ctgrSub} and is_item_no in (select i_no from item where i_completed = "false")
+order by ${sortName} desc
+limit #{pageNo}, 100;
+</select>
+
+<select id="selectItemNoSub" parameterType="SortProcess" resultType="ItemSellSet">
+select * from (select * from item_sell
+   inner join 
+   (select ANY_VALUE(ip_no) as ip_no, ip_item_no, ANY_VALUE(ip_value) as ip_value from item_photo group by ip_item_no)
+   tmp_table on is_item_no = tmp_table.ip_item_no) final_table1
+left join (select ap_item_no, count(*) as joiner_cnt from auction_participant group by ap_item_no) final_table2 on final_table1.ip_item_no = final_table2.ap_item_no
+where is_category_main=#{ctgrMain} and is_item_no in (select i_no from item where i_completed = "false")
+order by ${sortName}
+limit #{pageNo}, 100;
+</select>
+
+<select id="selectItemYesSub" parameterType="SortProcess" resultType="ItemSellSet">
+select * from (select * from item_sell
+   inner join 
+   (select ANY_VALUE(ip_no) as ip_no, ip_item_no, ANY_VALUE(ip_value) as ip_value from item_photo group by ip_item_no)
+   tmp_table on is_item_no = tmp_table.ip_item_no) final_table1
+left join (select ap_item_no, count(*) as joiner_cnt from auction_participant group by ap_item_no) final_table2 on final_table1.ip_item_no = final_table2.ap_item_no
+where is_category_main=#{ctgrMain} and is_category_sub=#{ctgrSub} and is_item_no in (select i_no from item where i_completed = "false")
+order by ${sortName}
+limit #{pageNo}, 100;
+</select>
+
+<select id="selectItemAllHomeUp" parameterType="SortProcess" resultType="ItemSellSet">
+select * from (select * from item_sell
+   inner join 
+   (select ANY_VALUE(ip_no) as ip_no, ip_item_no, ANY_VALUE(ip_value) as ip_value from item_photo group by ip_item_no)
+   tmp_table on is_item_no = tmp_table.ip_item_no) final_table1
+left join (select ap_item_no, count(*) as joiner_cnt from auction_participant group by ap_item_no) final_table2 on final_table1.ip_item_no = final_table2.ap_item_no
+where is_item_no in (select i_no from item where i_completed = "false")
+order by ${sortName}
+limit #{pageNo}, 100;
+</select>
+
+<select id="selectItemAllHomeDown" parameterType="SortProcess" resultType="ItemSellSet">
+select * from (select * from item_sell
+   inner join 
+   (select ANY_VALUE(ip_no) as ip_no, ip_item_no, ANY_VALUE(ip_value) as ip_value from item_photo group by ip_item_no)
+   tmp_table on is_item_no = tmp_table.ip_item_no) final_table1
+left join (select ap_item_no, count(*) as joiner_cnt from auction_participant group by ap_item_no) final_table2 on final_table1.ip_item_no = final_table2.ap_item_no
+where is_item_no in (select i_no from item where i_completed = "false")
+order by ${sortName} desc
+limit #{pageNo}, 100;
+</select>
+
+<!-- 상품삭제 -->
+
+<!-- 상품 업데이트 -->
+
+<!-- 카테고리별 개수 -->
+<select id="selectCountByCtgr" parameterType="ItemCtgrSearch" resultType="ItemCtgrCnt">
+select * from (select is_category_main, count(*) as cnt_main from item_sell
+where is_category_main = #{ctgrMain} and is_item_no in (select i_no from item where i_completed="false")) a
+inner join (select is_category_sub, count(*) as cnt_sub from item_sell where is_category_main like concat(concat("%",#{ctgrSub}),"%") group by is_category_sub) b
+order by substring(is_category_sub,-3);
+</select>
+
+<!-- 하위 카테고리까지 입력시, 해당 하위 카테고리 개수 뜸... 상위만 입력하면 상위카테고리의 개수 + 1개 이상의 하위 카테고리 뜸 -->
+<select id="selectCountByCtgrSub" parameterType="ItemCtgrSearch" resultType="ItemCtgrCnt">
+select * from (select is_category_main, count(*) as cnt_main from item_sell
+where is_category_main = #{ctgrMain} and is_item_no in (select i_no from item where i_completed="false")) a
+inner join (select is_category_sub, ifnull(count(*), 0) as cnt_sub from item_sell where is_category_main like concat(concat("%",substring(#{ctgrMain},-3)),"%") group by is_category_sub) b
+where is_category_sub like concat(concat("%", #{ctgrSub}),"%");
+</select>
+
+<!-- 아이템 이미지들 조회 -->
+<select id="selectItemImages" parameterType="int" resultType="ItemPhoto">
+select *
+  from item_photo
+ where ip_item_no = #{ipItemNo} and ip_item_no in (select i_no from item where i_completed = "false");
+</select>
+
+<!-- 판매상품 상세 조회 -->
+<select id="selectItemOne" parameterType="int" resultType="ItemSellSet">
+select itemsell.*, ip.ip_value
+  from item_sell as itemsell join item_photo as ip
+    on itemsell.is_item_no = ip.ip_item_no
+   and itemsell.is_item_no = #{isItemNo} limit 0, 1;
+</select>
+
+<!-- 판매상품의 입찰자 수 조회 -->
+<select id="selectItemCntAP" parameterType="int" resultType="int">
+select count(*) from auction_participant where ap_item_no = #{isItemNo};
+</select>
+
+<!-- 인덱싱 처리해서 100개 단위로만 내상품 보여주기 -->
+<select id="selectItemListIndexing" parameterType="int" resultType="ItemSell">
+select *
+  from item_sell
+ where is_user_no = #{isUserNo}
+ order by is_no desc limit #{page}, 100;
+</select>
+
+<select id="selectCountItemSell" parameterType="int" resultType="int">
+select count(*)
+  from item_sell
+ where is_user_no = #{isUserNo}
+</select>
+
+</mapper>
